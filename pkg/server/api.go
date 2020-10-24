@@ -37,22 +37,24 @@ func (api *api) Router() http.Handler {
 
 func (api *api) get(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
-	driver, err := api.database.Read(mux.Vars(request)["ID"])
 
-	if err != nil {
+	channel := make(chan *data.DriverWithError)
+	go api.database.Read(mux.Vars(request)["ID"], channel)
+
+	driverWithError := <- channel
+	if driverWithError.Err != nil {
 		writer.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(writer).Encode("Driver not found")
 		return
 	}
 
 	writer.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(writer).Encode(driver)
+	_ = json.NewEncoder(writer).Encode(driverWithError.Driver)
 }
 
 func (api *api) post(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(request.Body)
-	defer request.Body.Close()
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(writer).Encode("Error getting request body")
@@ -67,7 +69,10 @@ func (api *api) post(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = api.database.Write(driver)
+	channel := make(chan error)
+	go api.database.Write(driver, channel)
+
+	err = <- channel
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(writer).Encode("Error saving driver")

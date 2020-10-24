@@ -5,3 +5,8 @@ type Driver struct {
 	Longitude float64 `json:"longitude"`
 	ID        int     `json:"driver_id"`
 }
+
+type DriverWithError struct {
+	Driver *Driver
+	Err    error
+}

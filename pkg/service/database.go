@@ -10,12 +10,12 @@ type Database struct {
 	Scribble *scribble.Driver
 }
 
-func (database *Database) Read(id string) (*data.Driver, error) {
+func (database *Database) Read(id string, channel chan *data.DriverWithError) {
 	driver := &data.Driver{}
 	err := database.Scribble.Read("driver", id, &driver)
-	return driver, err
+	channel <- &data.DriverWithError{Driver: driver, Err: err}
 }
 
-func (database *Database) Write(driver *data.Driver) error {
-	return database.Scribble.Write("driver", strconv.Itoa(driver.ID), driver)
+func (database *Database) Write(driver *data.Driver, channel chan error) {
+	channel <- database.Scribble.Write("driver", strconv.Itoa(driver.ID), driver)
 }
